@@ -54,3 +54,7 @@ where first_name ='Amitah'
 select substring(title, length(winery)+2, 4)
 from winemag_p2
 where country = 'Macedonia'
+--Cách 2 bài 10
+select title
+, substring(title, cast(position('2' in title) as int),4)
+from winemag_p2 where country = 'Macedonia'
