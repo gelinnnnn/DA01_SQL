@@ -6,6 +6,7 @@ select count(*) as duplicate_companies
 from bang
 where so_luong > 1
 --Bài 2
+  --Cách 1
 with bang1 as (SELECT category, product, sum(spend) as total_spend
 from product_spend
 where extract (year from transaction_date) = 2022 and category = 'appliance'
@@ -24,6 +25,17 @@ UNION ALL
 select category, product, total_spend
 from bang2
 
+  --Cách 2
+  WITH cte AS (
+    SELECT category, product, SUM(spend) AS total_spend, RANK() OVER(
+           PARTITION BY category ORDER BY SUM(spend) DESC) AS ranking
+    FROM product_spend
+    WHERE EXTRACT(YEAR FROM DATE(transaction_date)) = 2022
+    GROUP BY category, product
+)
+SELECT category, product, total_spend
+FROM cte 
+WHERE ranking <= 2
 --Bài 3
 with bang as (SELECT count(*) as so_luong 
 FROM callers
@@ -66,48 +78,6 @@ where extract (month from event_date) = 6 and extract (year from event_date) = 2
 and extract(month from event_date) = 7
 group by extract(month from event_date)
 --Bài 6 (****)
---Code bị sai
-select date_format(trans_date,'%Y-%m') as month
-, country
-, count(trans_date) as trans_count
-, (select count(trans_date) from Transactions where state = 'approved' and date_format(trans_date,'%Y-%m') = a.date_format(trans_date,'%Y-%m')group by extract(month from trans_date), extract(year from trans_date)) as approved_count
-, sum(amount) as trans_total_amount
-, (select sum(amount) from Transactions where state = 'approved' and date_format(trans_date,'%Y-%m') = a.date_format(trans_date,'%Y-%m') group by extract(month from trans_date), extract(year from trans_date)) as approved_total_amount
-from Transactions as a
-group by extract(month from trans_date),extract(year from trans_date) , country
---Code sửa lại
-with bang2 as (
-    select id
-    , case when country is null then 'no_value' else country end as country
-    , state
-    , amount
-    , trans_date
-from Transactions
-)
-, bang as(
-select date_format(trans_date,'%Y-%m') as month
-, country
-, count(trans_date) as trans_count
-, sum(amount) as trans_total_amount
-from bang2
-group by extract(month from trans_date),extract(year from trans_date), country),
-bang1 as (select date_format(trans_date,'%Y-%m') as month
-, country
-, count(trans_date) as approved_count
-, sum(amount) as approved_total_amount
-from bang2 
-where state = 'approved'
-group by extract(month from trans_date), extract(year from trans_date), country)
-
-select a.month, case when a.country = 'no_value' then null else a.country end as country, a.trans_count, 
-case when b.approved_count is null then 0 else b.approved_count end as approved_count
-, a.trans_total_amount, 
-case when b.approved_total_amount is null then 0 else b.approved_total_amount end as approved_total_amount
-from bang as a
-left join bang1 as b
-on a.month = b.month and a.country = b.country
-
---Code refined
 select date_format(trans_date, '%Y-%m') as month
 , country
 , count(*) as trans_count
@@ -116,3 +86,91 @@ select date_format(trans_date, '%Y-%m') as month
 , sum(case when state = 'approved' then amount else 0 end) as approved_total_amount
 from Transactions
 group by (date_format(trans_date, '%Y-%m')), country
+
+--Bài 7
+with bang as(select *
+, rank () over (partition by product_id order by year) as thu_tu
+from Sales)
+
+select product_id
+, year as first_year
+, quantity
+, price
+from bang
+where thu_tu = 1
+
+--Bài 8
+with bang as (select a.product_key, b.customer_id
+from Product as a
+left join Customer as b
+on a.product_key = b.product_key)
+
+select customer_id
+from bang
+group by customer_id
+having count(distinct product_key) = (select count(*) from Product)
+
+--Code refined
+select customer_id
+from Customer
+group by customer_id
+having count(distinct product_key) = (select count(*) from Product)
+--Bài 9
+select e.employee_id
+from employees e
+where e.manager_id not in (
+    select s.employee_id  
+    from employees s
+)
+and e.salary < 30000
+order by e.employee_id asc
+--Bài 10
+with bang as(SELECT company_id, title, description, count(job_id) as so_luong
+from job_listings 
+group by company_id, title, description)
+select count(*) as duplicate_companies
+from bang
+where so_luong > 1
+--Bài 11
+with bang1 as(select b.name as results
+from MovieRating as a
+join Users as b on a.user_id = b.user_id
+group by a.user_id
+order by count(a.movie_id) desc, b.name asc
+limit 1)
+,bang2 as(select b.title as results
+    from MovieRating as a
+    join Movies as b on a.movie_id = b.movie_id
+    where month(a.created_at)= 2 and year(a.created_at)= 2020
+    group by a.movie_id
+    order by avg(a.rating) desc, results
+    limit 1)
+select results from bang1
+union all
+select results from bang2
+--Bài 12
+--Cách 1 (tư duy ban đầu)
+with bang1 as (select requester_id as id, count(accepter_id) as so_luong
+    from RequestAccepted
+    group by requester_id)
+, bang2 as (select accepter_id as id, count(requester_id) as so_luong
+    from RequestAccepted
+    group by accepter_id)
+, bang3 as
+(select id, so_luong from bang1
+union all
+select id, so_luong from bang2)
+
+select id, sum(so_luong) as num
+from bang3 group by id
+order by num desc
+limit 1
+--Cách 2 (refined)
+with a as (select requester_id as id from RequestAccepted
+union all
+select accepter_id as id from RequestAccepted)
+
+select id, count(id) as num from a group by id order by num desc limit 1
+
+
+
