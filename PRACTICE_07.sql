@@ -17,11 +17,6 @@ SELECT card_name
 FROM monthly_cards_issued) as bang
 where rank = 1 
 order by issued_amount desc
---Tại sao code này sai?
-SELECT card_name
-, first_value (issued_amount) over (partition by card_name order by issue_year, issue_month) as issued_amount
-FROM monthly_cards_issued
-order by issued_amount
 --Bài 3
 select user_id
 , spend
