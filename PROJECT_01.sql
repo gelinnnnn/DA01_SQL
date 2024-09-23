@@ -54,7 +54,7 @@ add column contactfirstname varchar(20)
 alter table public.sales_dataset_rfm_prj
 add column contactlastname varchar(20)
 update public.sales_dataset_rfm_prj
-set contactfirstname = upper(left(contactfullname,1))||substring(contactfullname, 2, position('-' in contactfullname)-2) -- Không thể + text mà phải || ???
+set contactfirstname = upper(left(contactfullname,1))||substring(contactfullname, 2, position('-' in contactfullname)-2) 
 update public.sales_dataset_rfm_prj
 set contactlastname = upper(substring(contactfullname, position('-' in contactfullname)+1,1)) ||substring(contactfullname, position('-' in contactfullname)+2)
 
@@ -103,4 +103,7 @@ from public.sales_dataset_rfm_prj)
 select quantityordered
 from cte 
 where z_score > 2
+
+--6
+Ấn Create New Table, đặt tên SALES_DATASET_RFM_PRJ_CLEAN, sau đó ấn Inherited from public.sales_dataset_rfm_prj
 
