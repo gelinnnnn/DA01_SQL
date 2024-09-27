@@ -153,8 +153,54 @@ select a.Month
 , a.TPO as TPO
 , (a.TPV - b.TPV)/b.TPV * 100.00 || '%' as Revenue_growth
 , (a.TPO - b.TPO)/b.TPO * 100.00 || '%' as Order_growth
+
 , a.Total_cost
 , a.TPV - a.Total_cost as Total_profit
 , (a.TPV - a.Total_cost)/a.Total_cost as Profit_to_cost_ratio
 from bang2 as a
 join bang2 as b on a.original_time = DATE_ADD(b.original_time, INTERVAL 1 MONTH) 
+
+--Bai 2
+with bang as (select
+date_trunc(cast(created_at as date),month) as time
+, user_id
+, dense_rank() over (partition by user_id order by date_trunc(cast(created_at as date),month)) as stt
+from bigquery-public-data.thelook_ecommerce.order_items
+where status <> 'Cancelled'
+order by time)
+, bang1 as (select user_id, time as adjusted_time
+from bang where stt = 1)
+
+
+, bang2 as 
+(select index
+, count(user_id) as so_luong
+, cohort_date
+from (
+select 12*(extract(year from time)- extract(year from bang1.adjusted_time)) + extract(month from time)- extract(month from bang1.adjusted_time) + 1 as index
+, bang.user_id
+, bang.time as cohort_date
+from bang 
+join bang1 on bang.user_id = bang1.user_id)
+where index <=4
+group by index, cohort_date
+order by cohort_date)
+
+
+select cohort_date
+, round(sum(n1)/sum(n1)*100.00,2) || '%' as n1
+, round(sum(n2)/sum(n1)*100.00,2) || '%' as n2
+, round(sum(n3)/sum(n1)*100.00,2) || '%' as n3
+, round(sum(n4)/sum(n1)*100.00,2) || '%' as n4
+from (select cohort_date, 
+case when index = 1 then so_luong else 0 end as n1
+, case when index = 2 then so_luong else 0 end as n2
+, case when index = 3 then so_luong else 0 end as n3
+, case when index = 4 then so_luong else 0 end as n4
+from bang2)
+group by cohort_date
+order by cohort_date
+
+
+
+
