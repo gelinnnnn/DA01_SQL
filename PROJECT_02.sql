@@ -174,7 +174,7 @@ from bang where stt = 1)
 
 , bang2 as 
 (select index
-, count(user_id) as so_luong
+, count( distinct user_id) as so_luong
 , cohort_date
 from (
 select 12*(extract(year from time)- extract(year from bang1.adjusted_time)) + extract(month from time)- extract(month from bang1.adjusted_time) + 1 as index
