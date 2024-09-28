@@ -5,10 +5,10 @@ from public.sales_dataset_rfm_prj
 group by  PRODUCTLINE, YEAR_ID, DEALSIZE
 order by year_id, productline, dealsize
 --Bài 2
-  --Tháng 10 có đơn hàng 10165 cao nhất với giá trị 77809.37
-select month_id,  sum(sales) as REVENUE, ordernumber as ORDER_NUMBER
+  --Tháng 10 có đơn hàng 10165 cao nhất với giá trị 77809.37 => Sai hoàn toàn, hỏi tháng nào có doanh thu cao nhất thì phải tự nhảy số là tháng của năm nào chứ ????
+select year_id, month_id,  sum(sales) as REVENUE, ordernumber as ORDER_NUMBER
 from public.sales_dataset_rfm_prj
-group by month_id, ordernumber
+group by year_id, month_id, ordernumber
 order by revenue desc
 --Bai 3
   --Classic Cars có doanh số tốt nhất tháng 11 với doanh số là 825156.26
