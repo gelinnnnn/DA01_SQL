@@ -85,10 +85,6 @@ from (select percentile_cont(0.25) within group (order by quantityordered) as Q1
 , percentile_cont(0.75) within group (order by quantityordered) - percentile_cont(0.25) within group (order by quantityordered) as IQR
 from public.sales_dataset_rfm_prj) as bang)
 
-select *
-from public.sales_dataset_rfm_prj
-where quantityordered < (select min_value from cte) or quantityordered > (select max_value from cte)
-
 delete from public.sales_dataset_rfm_prj
 where ordernumber in (select ordernumber
 from public.sales_dataset_rfm_prj
