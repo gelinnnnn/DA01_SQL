@@ -3,6 +3,10 @@
 /*Insight: Từ chart ta thấy
 - Lượng khách hàng và lượng đơn hàng hoàn thành tăng đều theo thời gian
 */
+/*Bổ sung insight:
+- Trong giai đoạn 2019-tháng 1 năm 2020, người tiêu dùng có xu hướng mua sắm nhiều hơn bình thường do các chương trình khuyến mãi cuối năm
+- Tháng 7 năm 2021 ghi nhận lượng mua hàng tăng bất thường, trái ngược với lượng mua giảm sút so với cùng kì năm 2020
+*/
 SELECT FORMAT_TIMESTAMP('%Y-%m', delivered_at) as complete_date
 , count(distinct user_id) as total_user
 , count(order_id) as total_order
@@ -14,9 +18,13 @@ order by complete_date
 /*Insight: Từ chart ta thấy
 - Số khách hàng đặt hàng hằng tháng tăng theo thời gian, nhưng giá trị trung bình của đơn hàng vẫn dao động từ 58-61, chứng tỏ công ty chỉ đang mở rộng số lượng khách hàng trong cùng 1 segment
 */
+/*Bổ sung insight (sau khi chỉnh lại thành count(distinct))
+- Giai đoạn năm 2019 do số lượng người dùng ít khiến giá trị đơn hàng trung bình qua các tháng có tỷ lệ biến động cao.
+               - Giai đoạn từ cuối năm 2019 lượng người dùng ổn định trên 400 và nhìn chung tiếp tục tăng qua các tháng, giá trị đơn hàng trung bình qua các tháng ổn định ở mức ~80-90
+*/
 select FORMAT_TIMESTAMP('%Y-%m', created_at) as order_date
 , count(distinct user_id) as distinct_users
-, sum(sale_price)/count(order_id) as average_order_value
+, sum(sale_price)/count( distinct order_id) as average_order_value
 from (
 select a.order_id, a.user_id, a.created_at, b.sale_price
 from bigquery-public-data.thelook_ecommerce.orders as a
@@ -26,11 +34,13 @@ where FORMAT_TIMESTAMP('%Y-%m', a.created_at) between '2019-01' and '2022-04')
 group by 1
 order by 1
 
---Bai 3
+--Bai 3 [Làm lại câu này]
 /*Insight
 - Xét trong cùng 1 giới, nữ càng nhỏ càng mua nhiều sản phẩm, tương tự với nam => Sản phẩm thu hút được độ tuổi nhỏ hơn
 - Xét trong cùng độ tuổi, nam có xu hướng mua nhiều sản phẩm hơn nữ => Sản phẩm thu hút được nhiều phái nam hơn
 */
+/* Note: Bài này chị Julie lấy data từ bảng users*/
+
 --Tim male
 with bang1 as (select user_id
 , first_name
@@ -73,8 +83,7 @@ a.user_id
 from bigquery-public-data.thelook_ecommerce.orders as a
 join bigquery-public-data.thelook_ecommerce.users as b on a.user_id = b.id
 where FORMAT_TIMESTAMP('%Y-%m', a.created_at) between '2019-01' and '2022-04' and b.gender = 'F'))
-
-
+  
 ,categorized_users as (select * from bang1
 where tag is not null
 union all 
@@ -114,7 +123,12 @@ group by format_timestamp('%Y-%m-%d',a.created_at), b.category
 order by sale_day, product_categories
 
 /*Cohort Analysis*/
-  --Bai 1
+  --Bai 1 [Làm lại câu này]
+  /*Hai bên đang hiểu sai ý nhau:
+- Ý bài làm của mình là tăng trưởng theo tháng, tức là tính tổng lợi nhuận của tất cả các category
+- Còn bài của chị Julie là tính tăng trưởng của từng category theo từng tháng*/
+/*Note: Mình quên mất tính năng của Lag (partition by Month)*/
+
 with bang as (select format_timestamp('%Y-%m', created_at) as day
 , sum(sale_price) as TPV
 , count(product_id) as TPO
@@ -161,8 +175,18 @@ from bang2 as a
 join bang2 as b on a.original_time = DATE_ADD(b.original_time, INTERVAL 1 MONTH) 
 
 --Bai 2
+/*Bổ sung insight:
+Nhìn chung hằng tháng TheLook ghi nhận số lượng người dùng mới tăng dần đều, thể hiện chiến dịch quảng cáo tiếp cận người dùng
+mới có hiệu quả.
+Tuy nhiên trong giai đoạn 4 tháng đầu tính từ lần mua hàng/sử dụng trang thương mại điện tử TheLook, tỷ lệ người dùng cũ
+quay lại sử dụng trong tháng kế tiếp khá thấp: dao động dưới 10% trong giai đoạn từ 2019-01 đến 2023-07 và tăng lên mức 
+trên 10% trong những tháng còn lại của năm 2023, trong đó cao nhất là tháng đầu tiên sau 2023-10 với 18.28%.
+ --> Tỷ lệ khách hàng trung thành thấp, TheLook nên xem xét cách quảng bá để thiếp lập và tiếp cận nhóm khách hàng trung thành
+nhằm tăng doanh thu từ nhóm này và tiết kiệm các chi phí marketing*/
+
+  
 with bang as (select
-date_trunc(cast(created_at as date),month) as time
+date_trunc(cast(created_at as date),month) as time /*Sử dụng date_trunc, month để chuyển toàn bộ về ngày 1*/
 , user_id
 , dense_rank() over (partition by user_id order by date_trunc(cast(created_at as date),month)) as stt
 from bigquery-public-data.thelook_ecommerce.order_items
