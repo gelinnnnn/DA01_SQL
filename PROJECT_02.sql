@@ -226,5 +226,41 @@ group by cohort_date
 order by cohort_date
 
 
+  
+/*Sửa lại*/
+with bang as (select
+date_trunc(cast(created_at as date),month) as time /*Sử dụng date_trunc, month để chuyển toàn bộ về ngày 1*/
+, user_id
+, dense_rank() over (partition by user_id order by date_trunc(cast(created_at as date),month)) as stt
+from bigquery-public-data.thelook_ecommerce.order_items
+order by time)
+, bang1 as (select user_id, time as adjusted_time
+from bang where stt = 1)
+
+
+, bang2 as 
+(select index
+, count( distinct user_id) as so_luong
+, cohort_date
+from (
+select 12*(extract(year from time)- extract(year from bang1.adjusted_time)) + extract(month from time)- extract(month from bang1.adjusted_time) + 1 as index
+, bang.user_id
+, bang.time as cohort_date
+from bang 
+join bang1 on bang.user_id = bang1.user_id)
+group by index, cohort_date
+order by cohort_date)
+
+
+select cohort_date, 
+sum(case when index = 1 then so_luong else 0 end) as n1
+, sum(case when index = 2 then so_luong else 0 end) as n2
+, sum(case when index = 3 then so_luong else 0 end) as n3
+, sum(case when index = 4 then so_luong else 0 end) as n4
+from bang2
+group by cohort_date
+order by cohort_date
+/*Xóa đi index = 5 thì có ảnh hưởng gì?*/
+
 
 
