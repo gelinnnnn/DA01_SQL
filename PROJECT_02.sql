@@ -43,12 +43,12 @@ Where created_at BETWEEN '2019-01-01 00:00:00' AND '2022-05-01 00:00:00'
 Group by month_year
 ORDER BY month_year
 
---Bai 3 [Làm lại câu này]
+--Bai 3 
+  /*Nếu chọn created_at của bảng users sẽ khác so với created_at của bảng orders*/
 /*Insight
 - Xét trong cùng 1 giới, nữ càng nhỏ càng mua nhiều sản phẩm, tương tự với nam => Sản phẩm thu hút được độ tuổi nhỏ hơn
 - Xét trong cùng độ tuổi, nam có xu hướng mua nhiều sản phẩm hơn nữ => Sản phẩm thu hút được nhiều phái nam hơn
 */
-/* Note: Bài này chị Julie lấy data từ bảng users*/
 
 --Tim male
 with bang1 as (select user_id
@@ -99,7 +99,7 @@ union all
 select * from bang2
 where tag is not null)
 
-select gender, tag, age, count(*) as so_luong
+select gender, tag, age, count(distinct user_id) as so_luong
 from categorized_users 
 group by gender, tag, age
 
@@ -132,7 +132,7 @@ group by format_timestamp('%Y-%m-%d',a.created_at), b.category
 order by sale_day, product_categories
 
 /*Cohort Analysis*/
-  --Bai 1 [Làm lại câu này]
+  --Bai 1 
   /*Hai bên đang hiểu sai ý nhau:
 - Ý bài làm của mình là tăng trưởng theo tháng, tức là tính tổng lợi nhuận của tất cả các category
 - Còn bài của chị Julie là tính tăng trưởng của từng category theo từng tháng*/
@@ -193,50 +193,7 @@ trên 10% trong những tháng còn lại của năm 2023, trong đó cao nhất
  --> Tỷ lệ khách hàng trung thành thấp, TheLook nên xem xét cách quảng bá để thiếp lập và tiếp cận nhóm khách hàng trung thành
 nhằm tăng doanh thu từ nhóm này và tiết kiệm các chi phí marketing*/
 
-  
-with bang as (select
-date_trunc(cast(created_at as date),month) as time /*Sử dụng date_trunc, month để chuyển toàn bộ về ngày 1*/
-, user_id
-, dense_rank() over (partition by user_id order by date_trunc(cast(created_at as date),month)) as stt
-from bigquery-public-data.thelook_ecommerce.order_items
-where status <> 'Cancelled'
-order by time)
-, bang1 as (select user_id, time as adjusted_time
-from bang where stt = 1)
-
-
-, bang2 as 
-(select index
-, count( distinct user_id) as so_luong
-, cohort_date
-from (
-select 12*(extract(year from time)- extract(year from bang1.adjusted_time)) + extract(month from time)- extract(month from bang1.adjusted_time) + 1 as index
-, bang.user_id
-, bang.time as cohort_date
-from bang 
-join bang1 on bang.user_id = bang1.user_id)
-where index <=4
-group by index, cohort_date
-order by cohort_date)
-
-
-select cohort_date
-, round(sum(n1)/sum(n1)*100.00,2) || '%' as n1
-, round(sum(n2)/sum(n1)*100.00,2) || '%' as n2
-, round(sum(n3)/sum(n1)*100.00,2) || '%' as n3
-, round(sum(n4)/sum(n1)*100.00,2) || '%' as n4
-from (select cohort_date, 
-case when index = 1 then so_luong else 0 end as n1
-, case when index = 2 then so_luong else 0 end as n2
-, case when index = 3 then so_luong else 0 end as n3
-, case when index = 4 then so_luong else 0 end as n4
-from bang2)
-group by cohort_date
-order by cohort_date
-
-
-  
-/*Sửa lại*/
+  --Bước 1: Tìm tháng mua hàng đầu tiên của khách
 with bang as (select
 date_trunc(cast(created_at as date),month) as time /*Sử dụng date_trunc, month để chuyển toàn bộ về ngày 1*/
 , user_id
@@ -246,7 +203,7 @@ order by time)
 , bang1 as (select user_id, time as adjusted_time
 from bang where stt = 1)
 
-
+--Bước 2: Tìm index = chênh lệch giữa ngày mua hiện tại và ngày mua đầu tiên
 , bang2 as 
 (select index
 , count( distinct user_id) as so_luong
@@ -260,7 +217,7 @@ join bang1 on bang.user_id = bang1.user_id)
 group by index, cohort_date
 order by cohort_date)
 
-
+--Bước 3: Tìm customer_retention
 select cohort_date, 
 sum(case when index = 1 then so_luong else 0 end) as n1
 , sum(case when index = 2 then so_luong else 0 end) as n2
@@ -269,7 +226,6 @@ sum(case when index = 1 then so_luong else 0 end) as n1
 from bang2
 group by cohort_date
 order by cohort_date
-/*Xóa đi index = 5 thì có ảnh hưởng gì?*/
 
 
 
