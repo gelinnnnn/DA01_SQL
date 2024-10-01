@@ -1,38 +1,47 @@
 --Adhoc tasks
 --Bai 1: 
+/*Domain knowledge ngành TMĐT:
+- Thời gian đặt hàng: created_at
+- Thời gian thanh toán:
+- Thời gian giao hàng cho vận chuyển/Thời gian: shipped_at
+- Thời gian hoàn thành: delivered_at
+- Khái niệm đơn hàng, mã đơn hàng: 
++ Nếu 2 sản phẩm (có thể giống hoặc khác của cùng 1 cửa hàng và được đặt cùng lúc thì được tính chung là 1 mã đơn hàng
++ Nếu 2 sản phẩm của 2 cửa hàng khác nhau, được đặt cùng lúc thì tính là 2 mã đơn hàng khác nhau
++ Mỗi mã đơn hàng được tính là một đơn hay mỗi sản phẩm được tính là một đơn?
+*/
 /*Insight: Từ chart ta thấy
 - Lượng khách hàng và lượng đơn hàng hoàn thành tăng đều theo thời gian
-*/
-/*Bổ sung insight:
 - Trong giai đoạn 2019-tháng 1 năm 2020, người tiêu dùng có xu hướng mua sắm nhiều hơn bình thường do các chương trình khuyến mãi cuối năm
 - Tháng 7 năm 2021 ghi nhận lượng mua hàng tăng bất thường, trái ngược với lượng mua giảm sút so với cùng kì năm 2020
 */
-SELECT FORMAT_TIMESTAMP('%Y-%m', delivered_at) as complete_date
-, count(distinct user_id) as total_user
-, count(order_id) as total_order
-FROM bigquery-public-data.thelook_ecommerce.orders
-where status = 'Complete' and FORMAT_TIMESTAMP('%Y-%m', delivered_at) between '2019-01' and '2022-04'
-group by 1
-order by complete_date
+Select 
+FORMAT_DATE('%Y-%m', t2.delivered_at) as month_year, 
+count(DISTINCT t1.user_id) as total_user,
+count(t1.ORDER_id) as total_order
+from bigquery-public-data.thelook_ecommerce.orders as t1
+Join bigquery-public-data.thelook_ecommerce.order_items as t2 
+on t1.order_id=t2.order_id
+Where t1.status='Complete' and 
+t2.delivered_at BETWEEN '2019-01-01 00:00:00' AND '2022-05-01 00:00:00'
+Group by month_year
+ORDER BY month_year
+  
 --Bai 2
+  /*Kết quả sai lệch là do: created_at của 2 bảng khác nhau, ví dụ ID 90832 ở bảng orders được tạo vào ngày 31.1, trong khi được tạo vào 1/2 ở bảng order_items*/
 /*Insight: Từ chart ta thấy
 - Số khách hàng đặt hàng hằng tháng tăng theo thời gian, nhưng giá trị trung bình của đơn hàng vẫn dao động từ 58-61, chứng tỏ công ty chỉ đang mở rộng số lượng khách hàng trong cùng 1 segment
-*/
-/*Bổ sung insight (sau khi chỉnh lại thành count(distinct))
 - Giai đoạn năm 2019 do số lượng người dùng ít khiến giá trị đơn hàng trung bình qua các tháng có tỷ lệ biến động cao.
-               - Giai đoạn từ cuối năm 2019 lượng người dùng ổn định trên 400 và nhìn chung tiếp tục tăng qua các tháng, giá trị đơn hàng trung bình qua các tháng ổn định ở mức ~80-90
+- Giai đoạn từ cuối năm 2019 lượng người dùng ổn định trên 400 và nhìn chung tiếp tục tăng qua các tháng, giá trị đơn hàng trung bình qua các tháng ổn định ở mức ~80-90
 */
-select FORMAT_TIMESTAMP('%Y-%m', created_at) as order_date
-, count(distinct user_id) as distinct_users
-, sum(sale_price)/count( distinct order_id) as average_order_value
-from (
-select a.order_id, a.user_id, a.created_at, b.sale_price
-from bigquery-public-data.thelook_ecommerce.orders as a
-join bigquery-public-data.thelook_ecommerce.order_items as b
-on a.order_id = b.order_id
-where FORMAT_TIMESTAMP('%Y-%m', a.created_at) between '2019-01' and '2022-04')
-group by 1
-order by 1
+Select 
+FORMAT_DATE('%Y-%m', created_at) as month_year,
+count(DISTINCT user_id) as distinct_users,
+round(sum(sale_price)/count(distinct order_id),2) as average_order_value
+from bigquery-public-data.thelook_ecommerce.order_items
+Where created_at BETWEEN '2019-01-01 00:00:00' AND '2022-05-01 00:00:00'
+Group by month_year
+ORDER BY month_year
 
 --Bai 3 [Làm lại câu này]
 /*Insight
