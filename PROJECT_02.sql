@@ -212,7 +212,7 @@ from bang where stt = 1)
 from (
 select 12*(extract(year from time)- extract(year from bang1.adjusted_time)) + extract(month from time)- extract(month from bang1.adjusted_time) + 1 as index
 , bang.user_id
-, bang.time as cohort_date
+, bang1.adjusted_time as cohort_date ---Chính cái dòng này, mình đã nhầm sang bang.time mà mất gần 2 tiếng rưỡi để tìm ra lỗi sai
 from bang 
 join bang1 on bang.user_id = bang1.user_id)
 group by index, cohort_date
