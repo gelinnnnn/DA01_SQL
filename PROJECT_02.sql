@@ -193,6 +193,7 @@ trên 10% trong những tháng còn lại của năm 2023, trong đó cao nhất
  --> Tỷ lệ khách hàng trung thành thấp, TheLook nên xem xét cách quảng bá để thiếp lập và tiếp cận nhóm khách hàng trung thành
 nhằm tăng doanh thu từ nhóm này và tiết kiệm các chi phí marketing*/
 
+  --Cách 1: Không tối ưu vì có thể có nhiều user_id trong cùng 1 tháng, lúc đó cùng xếp rank 1, join sẽ rất tốn dữ liệu
   --Bước 1: Tìm tháng mua hàng đầu tiên của khách
 with bang as (select
 date_trunc(cast(created_at as date),month) as time /*Sử dụng date_trunc, month để chuyển toàn bộ về ngày 1*/
@@ -227,5 +228,41 @@ from bang2
 group by cohort_date
 order by cohort_date
 
+--Cách 2
+With a as
+(Select user_id, amount, FORMAT_DATE('%Y-%m', first_purchase_date) as cohort_month,
+created_at,
+(Extract(year from created_at) - extract(year from first_purchase_date))*12 
+  + Extract(MONTH from created_at) - extract(MONTH from first_purchase_date) +1
+  as index
+from 
+(
+Select user_id, 
+round(sale_price,2) as amount,
+Min(created_at) OVER (PARTITION BY user_id) as first_purchase_date,
+created_at
+from bigquery-public-data.thelook_ecommerce.order_items 
+) as b),
+cohort_data as
+(
+Select cohort_month, 
+index,
+COUNT(DISTINCT user_id) as user_count,
+round(SUM(amount),2) as revenue
+from a
+Group by cohort_month, index
+ORDER BY INDEX
+)
+--CUSTOMER COHORT-- 
+
+Select 
+cohort_month,
+Sum(case when index=1 then user_count else 0 end) as m1,
+Sum(case when index=2 then user_count else 0 end) as m2,
+Sum(case when index=3 then user_count else 0 end) as m3,
+Sum(case when index=4 then user_count else 0 end) as m4
+from cohort_data
+Group by cohort_month
+Order by cohort_month
 
 
