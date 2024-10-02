@@ -39,6 +39,8 @@ from user_transactions) as bang
 where stt = 1
 order by transaction_date
 --Bài 5
+---Bài 5 này có code hay: avg(tweet_count) over (partition by user id order by rows between 2 preceding and current row): chỉ tính 3 dòng liên tiếp
+  
 --Cách 1
 SELECT user_id
 , tweet_date
